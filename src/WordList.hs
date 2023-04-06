@@ -4,11 +4,11 @@ import Prelude hiding (readFile)
 
 import Paths_memorable_password_generator (getDataFileName)
 
-import Text.Megaparsec (Parsec, ParseErrorBundle, parse)
-import Text.Megaparsec.Char (eol, digitChar, tab, lowerChar)
+import Text.Megaparsec (Parsec, ParseErrorBundle, parse, eof)
+import Text.Megaparsec.Char (eol, digitChar, tab, lowerChar, symbolChar, punctuationChar)
 
-import Control.Monad.Combinators (sepEndBy, count, some)
-import Control.Applicative ((*>))
+import Control.Monad.Combinators (count, some, someTill)
+import Control.Applicative ((*>), (<|>))
 
 import Data.Array (Array, listArray)
 import Data.Text (Text, pack)
@@ -21,8 +21,9 @@ type ParseError = ParseErrorBundle Text Void
 type Parser = Parsec Void Text
 
 wordListParser :: Parser WordList
-wordListParser = arrList <$> wordlistLine `sepEndBy` eol where
-    wordlistLine = count 5 digitChar *> tab *> (pack <$> some lowerChar)
+wordListParser = arrList <$> wordlistLines where
+    wordlistLine = count 5 digitChar *> tab *> (pack <$> some (lowerChar <|> symbolChar <|> punctuationChar)) <* eol
+    wordlistLines = someTill wordlistLine eof
     arrList xs = listArray (0, length xs - 1) xs
 
 loadWordList :: IO (Either ParseError WordList)
