@@ -1,20 +1,31 @@
 module MemorablePasswordGenerator where
 
-import Prelude hiding (readFile, lines, words)
-
-import Data.Text (Text, lines, toTitle, words)
-import Data.Text.Lazy (toStrict)
-import Data.Text.IO (readFile)
-import Data.Text.Format
+import Data.Text (Text, toTitle, snoc, pack)
 import System.Random
-import Data.Array (Array, listArray, bounds, (!))
+import Data.Array (bounds, (!))
+import Data.List ((!!))
+import Text.Printf (printf)
 
 import Polysemy
 import Polysemy.State
 import Polysemy.Reader
 
+import WordList
+
 type PwGen g = (g, Text)
-type WordList = Array Int Text
+
+symbols :: String
+symbols = "!@#$%^&*()_-+=\\|[]{}'\";:/?,.<>"
+
+nSymbols :: Int
+nSymbols = length symbols
+
+addSymbol :: (RandomGen g, Member (State (PwGen g)) r) => Sem r ()
+addSymbol = do
+    (gen, pw) <- get
+    let (i, gen') = randomR (0, nSymbols - 1) gen
+    put (gen', snoc pw (symbols !! i))
+
 
 updateGen :: Member (State (PwGen g)) r => g -> Sem r ()
 updateGen g = gets snd >>= \pw -> put (g, pw)
@@ -24,7 +35,7 @@ addDigits = do
     (gen, pw) <- get
     let
         (num, gen') = randomR @Int (0, 99) gen
-        pw' = toStrict $ format "%s%02d" (pw, num)
+        pw' = pack $ printf "%s%02d" pw num
     put (gen', pw')
 
 pickAnyWord :: (RandomGen g, Members [State (PwGen g), Reader WordList] r) => Sem r Text
@@ -42,16 +53,12 @@ addWord :: (RandomGen g, Members [State (PwGen g), Reader WordList] r) => Sem r 
 addWord = do
     word <- pickAnyWord
     (gen, pw) <- get
-    let pw' = toStrict $ format "%s%s" (pw, word)
+    let pw' = pack $ printf "%s%s" pw word
     put (gen, pw')
 
-parseWl :: Text -> Array Int Text
-parseWl content = listArray (0, nwords - 1) wordlistWords where
-    wordlistLines = lines content
-    wordlistWords = map (last . words) wordlistLines
-    nwords = length wordlistWords
+generatePassword :: forall g. RandomGen g => g -> WordList -> Text
+generatePassword g wl = runGen gen where
+    gen :: Members [Reader WordList, State (PwGen g)] r => Sem r ()
+    gen = addWord >> addDigits >> addSymbol >> addWord
 
-loadWordlist :: IO WordList
-loadWordlist = do
-    wordlistContent <- readFile "eff_large_wordlist.txt"
-    return $ parseWl wordlistContent
+    runGen = run . fmap (snd . fst) . runState (g, "") . runReader wl
