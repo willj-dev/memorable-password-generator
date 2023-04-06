@@ -23,7 +23,7 @@ type Parser = Parsec Void Text
 wordListParser :: Parser WordList
 wordListParser = arrList <$> wordlistLines where
     wordlistLine = count 5 digitChar *> tab *> (pack <$> some (lowerChar <|> symbolChar <|> punctuationChar)) <* eol
-    wordlistLines = someTill wordlistLine eof
+    wordlistLines = wordlistLine `someTill` eof
     arrList xs = listArray (0, length xs - 1) xs
 
 loadWordList :: IO (Either ParseError WordList)

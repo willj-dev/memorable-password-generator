@@ -1,6 +1,6 @@
 module MemorablePasswordGenerator where
 
-import Data.Text (Text, toTitle, snoc, pack)
+import Data.Text (Text, toTitle, snoc, pack, append)
 import System.Random
 import Data.Array (bounds, (!))
 import Text.Printf (printf)
@@ -25,7 +25,6 @@ addSymbol = do
     let (i, gen') = randomR (0, nSymbols - 1) gen
     put (gen', snoc pw (symbols !! i))
 
-
 updateGen :: Member (State (PwGen g)) r => g -> Sem r ()
 updateGen g = gets snd >>= \pw -> put (g, pw)
 
@@ -34,7 +33,8 @@ addDigits = do
     (gen, pw) <- get
     let
         (num, gen') = randomR @Int (0, 99) gen
-        pw' = pack $ printf "%s%02d" pw num
+        twoDigitNum = pack $ printf "%02d" num
+        pw' = pw `append` twoDigitNum
     put (gen', pw')
 
 pickAnyWord :: (RandomGen g, Members [State (PwGen g), Reader WordList] r) => Sem r Text
@@ -52,7 +52,7 @@ addWord :: (RandomGen g, Members [State (PwGen g), Reader WordList] r) => Sem r 
 addWord = do
     word <- pickAnyWord
     (gen, pw) <- get
-    let pw' = pack $ printf "%s%s" pw word
+    let pw' = pw `append` word
     put (gen, pw')
 
 generatePassword :: forall g. RandomGen g => g -> WordList -> Text
