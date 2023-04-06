@@ -3,7 +3,6 @@ module MemorablePasswordGenerator where
 import Data.Text (Text, toTitle, snoc, pack)
 import System.Random
 import Data.Array (bounds, (!))
-import Data.List ((!!))
 import Text.Printf (printf)
 
 import Polysemy

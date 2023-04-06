@@ -8,7 +8,7 @@ import Text.Megaparsec (Parsec, ParseErrorBundle, parse, eof)
 import Text.Megaparsec.Char (eol, digitChar, tab, lowerChar, symbolChar, punctuationChar)
 
 import Control.Monad.Combinators (count, some, someTill)
-import Control.Applicative ((*>), (<|>))
+import Control.Applicative ((<|>))
 
 import Data.Array (Array, listArray)
 import Data.Text (Text, pack)
